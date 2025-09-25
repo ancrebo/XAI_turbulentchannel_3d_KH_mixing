@@ -1,0 +1,2475 @@
+
+Welcome to the XAI_TurbulentChannel_optimized repository by Andres Cremades. 
+
+This repository contains the files, functions and data required for training a Deep Learning model for predicting the 
+evolution of a turbulent channel and then calculate the SHAP values or importance of each grid node.
+
+The code module follows the structure below:
+    main code
+    |
+    |
+    |---#  1) check_data.py
+    |         Function to check if the tensorflow data is corrupt
+    |---#  2) create_uvstruc_dataset.py
+    |         Function to create the dataset of tangential Reynolds stress structures.
+    |---#  3) main_CNN.py
+    |         Function for training the Deep Learning function.
+    |---#  4) main_SHAP.py
+    |         Function to calculate the SHAP values using Expected Gradients
+    |---#  5) main_statistics.py
+    |         Function to calculate the statistics of the flow
+    |---#  6) main_uvstruc.py
+    |         Function to calculate the Reynolds stress structures of a field of the flow
+    |---#  7) plot_training_epoch.py
+    |         Function to plot the results of the training process
+    |---#  8) plot_umean.py
+    |         Function to plot the results of the mean velocity
+    |---#  9) plot_urms.py
+    |         Function to plot the root mean square of the velocity
+    |---# 10) prepare_data.py
+    |         Function to prepare the data for the training with the tensorflow format
+    |---# 11) [py_bin]
+    |   |     Folder to store the python code
+    |   |---# 11.1) [py_class]
+    |   |   |       Folder to store the code relative to the classes      
+    |   |   |---# 11.1.1) ann_config.py
+    |   |   |             Function to generate the artificial neural network class. Defines strategy, models...
+    |   |   |---# 11.1.2) flow_field.py
+    |   |   |             Function to generate the flow field of the channel and the grid characteristics
+    |   |   |---# 11.1.3) plot_format.py
+    |   |   |             Function to generate a class for the plots
+    |   |   |---# 11.1.4) shap_config.py
+    |   |   |             Function to generate a class for the shap values model
+    |   |   |---# 11.1.5) structures.py
+    |   |   |             Function to define the structure properties
+    |   |   |---# 11.1.6) uv_structure.py
+    |   |                 Function to define the uv structures
+    |   |---# 11.2) [py_functions]
+    |   |   |       Folder to store the functions required by the calculations
+    |   |   |---# 11.2.1) CNNblock_definition.py
+    |   |   |             File containing the functions to define the neural network blocks
+    |   |   |---# 11.2.2) multiworker_checkpoint.py
+    |   |   |             File containing the functions to decide if the node in the multiworker are chief or worker
+    |   |   |---# 11.2.3) norm_velocity.py
+    |   |   |             File containing the functions for normalize and dimensionalize the velocities
+    |   |   |---# 11.2.4) normalization.py
+    |   |   |             File containing the functions for calculate the normalization
+    |   |   |---# 11.2.5) read_norm_velocity.py
+    |   |   |             File containing the function to read the velocity field and normalize it
+    |   |   |---# 11.2.6) read_velocity.py
+    |   |   |             File containing the function to read the velocity field
+    |   |   |---# 11.2.7) trainvali_data.py
+    |   |   |             File containing the functions to read and normalize the data for the training. Also prepares
+    |   |   |             and read data with the tensorflow format.
+    |   |   |---# 11.2.8) umean.py
+    |   |   |             Function to calculate the mean velocity
+    |   |   |---# 11.2.9) urms.py
+    |   |                 Function to calculate the rms velocity
+    |   |---# 11.3) [py_packages]
+    |   |   |       Folder to store modified packages
+    |   |   |---# 11.3.1) [shap]
+    |   |                 Folder containing the shap module of python with modifications to save memory in the
+    |   |                 calculation of the GradientExplainer.
+    |   |---# 11.4) [py_plots]
+    |   |   |       Folder containing the files for creating the plots
+    |   |   |---# 11.4.1) plottrain.py
+    |   |   |             File for plotting the training epochs
+    |   |   |---# 11.4.2) plotumean.py
+    |   |   |             File for plotting the mean velocity
+    |   |   |---# 11.4.3) ploturms.py
+    |   |                 File for plotting the rms velocity
+    |   |---# 11.5) [py_remote]
+    |   |   |       Folder containing the files required for reading the database in a ssh server
+    |   |   |---# 11.5.1) read_remote.py
+    |   |                 File containing functions for reading files via ssh
+
+
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[main_code]
+    These functions are used to call the routines to the calculation of the models, structures or postprocess the
+    information.
+..........................................................................................................................
+
+#  1)
+
+-------------------------------------------------------------------------------------------------------------------------
+check_data.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 18 10:12:32 2024
+
+@author: Andres Cremades Botella
+
+File to prepare the data for the tensorflow training. To run this file the user needs to define the following 
+variables:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - tr_data_str : (str) name of the file containing the information required for the training.
+
+#  2)
+
+-------------------------------------------------------------------------------------------------------------------------
+create_uvstruc_dataset.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Mar 27 08:23:08 2024
+
+@author: Andres Cremades Botella
+
+Function to create the tangential Reynolds stress structure dataset. In the function the grid-points containing the
+structures. To lauch the file the following parameters need to be selected:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - st_data_str : (str) name of the file containing the information required for the statistics.
+For more information about the tangential Reynolds stress structures:
+    - Lozano-Durán, A., Flores, O., & Jiménez, J. (2012). The three-dimensional structure of momentum transfer in
+      turbulent channels. Journal of Fluid Mechanics, 694, 100-130.
+
+#  3)
+
+-------------------------------------------------------------------------------------------------------------------------
+main_CNN.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 18 10:12:32 2024
+
+@author: Andres Cremades Botella
+
+File to launch Deep model training. 
+The file selects the folder containing the information of the calculation and inside the files used for configuring the
+training and the calculation of the SHAP values. The user of this code requires to define the following parameters:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - tr_data_str : (str) name of the file containing the information required for the training.
+This code has been tested on the multiworker configuration of the cluster Alvis:
+    - Alvis general information: https://www.c3se.chalmers.se/about/Alvis/
+    - Alvis node availability  : https://scruffy.c3se.chalmers.se/d/alvis-public/alvis-public?orgId=1
+The last configuration of the calculation launcher that has been tested in the cluster is provided in the following
+lines:
+    #!/usr/bin/env bash
+    #SBATCH --job-name=MW_A100_2
+    #SBATCH -A NAISS2024-5-129 -p alvis
+    #SBATCH --nodes 4
+    #SBATCH --exclude=alvis[3-4]-[01-09]
+    #SBATCH --ntasks-per-node=1
+    #SBATCH --gpus-per-node=A100:4
+    #SBATCH --cpus-per-task=64
+    #SBATCH --hint=nomultithread
+    #SBATCH --distribution=block:block
+    #SBATCH --time=60:00:00
+    #SBATCH --mail-type ALL
+    #SBATCH --mail-user andrescb@kth.se
+    #SBATCH --output ./logs/trainA100.out
+    #SBATCH --error  ./logs/trainA100.error
+    unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+    set -x
+    cd ../
+    module purge
+    module load  TensorFlow/2.7.1-foss-2021b-CUDA-11.4.1
+    srun python main_CNN_MW.py
+
+#  4)
+
+-------------------------------------------------------------------------------------------------------------------------
+main_SHAP.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 18 10:12:32 2024
+
+@author: Andres Cremades Botella
+
+File to calculate the SHAP values of each grid-point. The SHAP values are calculated with the Expected Gradients
+methdology. The link to the SHAP package and the reference paper are provided below:
+    - GradientExplainer: https://shap.readthedocs.io/en/latest/generated/shap.GradientExplainer.html
+    - Article: Erion, G., Janizek, J. D., Sturmfels, P., Lundberg, S. M., & Lee, S. I. (2021).
+               Improving performance of deep learning models with axiomatic attribution priors and expected gradients.
+               Nature machine intelligence, 3(7), 620-631.
+In order to launch the code the following variables need to be fulfilled:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - tr_data_str : (str) name of the file containing the information required for the training.
+    - sh_data_str : (str) name of the file containing the information required for calculating the SHAP values
+
+#  5)
+
+-------------------------------------------------------------------------------------------------------------------------
+main_statistics.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Mar 27 08:23:08 2024
+
+@author: Andres Cremades Botella
+
+File to create the statistics of the flow fields: mean, rms, normalization. The file requires to set the following
+variables:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - st_data_str : (str) name of the file containing the information required for the statistics.
+
+#  6)
+
+-------------------------------------------------------------------------------------------------------------------------
+main_uvstruc.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Mar 27 08:23:08 2024
+
+@author: Andres Cremades Botella
+
+Function to create the tangential Reynolds stress file of the structures in a field. In the function the grid-points
+containing the structures. To lauch the file the following parameters need to be selected:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - st_data_str : (str) name of the file containing the information required for the statistics.
+For more information about the tangential Reynolds stress structures:
+    - Lozano-Durán, A., Flores, O., & Jiménez, J. (2012). The three-dimensional structure of momentum transfer in
+      turbulent channels. Journal of Fluid Mechanics, 694, 100-130.
+
+#  7)
+
+-------------------------------------------------------------------------------------------------------------------------
+plot_training_epoch.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 13:38:39 2024
+
+@author: Andres Cremades Botella
+
+Create the plot of the training epochs. The file requires to set the following paths:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+In addition the following variables need to be set:
+    - xlabel      : label of the x axis
+    - ylabel      : label of the y axis
+    - fontsize    : size of the text in the figure
+    - figsize_x   : size of the figure in axis x
+    - figsize_y   : size of the figure in axis y
+    - colormap    : colormap used in the plot
+    - colornum    : number of levels required in the colormap
+    - fig_name    : name of the figure after saving
+    - dpi         : dots per inch of the figure
+
+#  8)
+
+-------------------------------------------------------------------------------------------------------------------------
+plot_umean.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 13:38:39 2024
+
+@author: Andres Cremades Botella
+
+Create the plot of the mean velocities. The file requires to set the following paths:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - st_data_str : (str) name of the file containing the information required for the statistics.
+In addition the following variables need to be set:
+    - xlabel      : label of the x axis
+    - ylabel      : label of the y axis
+    - fontsize    : size of the text in the figure
+    - figsize_x   : size of the figure in axis x
+    - figsize_y   : size of the figure in axis y
+    - colormap    : colormap used in the plot
+    - colornum    : number of levels required in the colormap
+    - fig_name    : name of the figure after saving
+    - dpi         : dots per inch of the figure
+
+#  9)
+
+-------------------------------------------------------------------------------------------------------------------------
+plot_urms.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 13:38:39 2024
+
+@author:  Andres Cremades Botella
+
+Create the plot of the root mean squared velocity. The file requires to set the following paths:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - st_data_str : (str) name of the file containing the information required for the statistics.
+In addition the following variables need to be set:
+    - xlabel      : label of the x axis
+    - ylabel      : label of the y axis
+    - fontsize    : size of the text in the figure
+    - figsize_x   : size of the figure in axis x
+    - figsize_y   : size of the figure in axis y
+    - colormap    : colormap used in the plot
+    - colornum    : number of levels required in the colormap
+    - fig_name    : name of the figure after saving
+    - dpi         : dots per inch of the figure
+
+#  10)
+
+-------------------------------------------------------------------------------------------------------------------------
+check_data.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 18 10:12:32 2024
+
+@author: Andres Cremades Botella
+
+File to prepare the data for the tensorflow training. To run this file the user needs to define the following 
+variables:
+    - folder_def  : (str) name of the folder containing the files for configuring the case of analysis.
+    - chd_str     : (str) name of the file containing the data of the channel.
+    - folders_str : (str) name of the file containing the folders and files used in the problem.
+    - tr_data_str : (str) name of the file containing the information required for the training.
+
+
+# 11):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_bin]
+    This folder is used for storing python code
+..........................................................................................................................
+
+
+# 11.1):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_class]
+    This folder is used for storing python code related to generate classes in the code
+..........................................................................................................................
+
+#  11.1.1)
+
+-------------------------------------------------------------------------------------------------------------------------
+ann_config.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 18 10:18:38 2024
+
+@author: Andres Cremades Botella
+
+File to define the deep learning model. The file contains a class for the deep learning model:
+    Class:
+        - deep_model : Class of the deep learning model. 
+
+
+    .....................................................................................................................
+    # deep_model: Class containing the information of the deep learning model.
+        * Functions:
+            - __init__          : initialization of the class. Read data of the flow, path to the data...
+            - define_model      : defines the Deep Learning model
+            - create_model      : creates the Deep Learning model
+            - model_base        : defines the model layers
+            - train_model       : trains the DL model
+            - prepare_data      : function to create the data in the tensorflow format
+            - architecture_Unet : definition of the architecture of the U-net
+            - _save_training    : function for saving the training data
+            - check_data        : check the database
+        * Variables:
+            - uvw_folder        : folder of the velocity fields
+            - uvw_file          : file name of the velocity fileds without index
+            - padding           : padding of the fields
+            - dx                : downsampling in x
+            - dy                : downsampling in y
+            - dz                : downsampling in z
+            - data_folder       : folder for storing the data of the model
+            - umean_file        : file of the mean velocity
+            - unorm_file        : file for the normalization of the velocity
+            - L_x               : size of the channel in the streamwise direction
+            - L_z               : size of the channel in the spanwise dirction
+            - L_y               : half of the width of the channel
+            - uvw_folder_tf     : folder of the velocity fields with the tensorflow format
+            - uvw_folderii_tf   : file of the velocity fields with the tensorflow format
+            - rey               : friction reynolds number
+            - utau              : friction velocity
+            - ssh_flag_train    : flag determining if ssh connection should be activated
+            - uvw_folder_temp   : temporal forlder for storing the files
+            - ssh_server        : server to read using the ssh connection
+            - ssh_username      : username of the server
+            - ssh_password      : password of the server user
+            - shpx              : shape of the channel in the streamwise direction
+            - shpy              : shape of the channel in the wall-normal direction
+            - shpz              : shape of the channel in the spanwise direction
+            - ngpu              : number of GPUs
+            - learat            : learning ratio of the training
+            - optmom            : momentum of the RMSprop algorithm
+            - batch_size        : batch size of the training
+            - field_ini         : initial field for the training
+            - field_fin         : final fields for the training
+            - field_mem         : number of fields load in memory
+            - epoch_save        : number of epoch for saving the solution during the training
+            - epoch_max         : number of epoch of the training before refreshing the data loaded in the memory
+            - read_model        : flag to define if the model has to be created or read
+            - model_folder      : folder for the models
+            - model_name        : name of the model file
+            - nfil              : number of filters of the first layer of the unet
+            - stride            : stride of the unet
+            - activation        : activation function
+            - kernel            : kernel size
+            - pooling           : size of the poolings
+            - delta_pred        : distance between the input field and the output field for the default database 
+                                  the distance is 5 viscous units
+            - hist_file         : file for saving the history of the training
+            - test_size         : percentage of the data used for testing during training (value between 0 and 1)
+            - adapt_batch       : flag for adapting the fields read to the batch size of the strategy
+            - prep_data         : flag for selecting prepared data (True) or non prepared data (False)
+            - flag_model        : flag for selecting if the model needs to be created (True: create it,
+                                                                                       Flase: do not create it)
+            - flag_central      : flag to choose the segmentation strategy (True: CentralStorageStrategy,
+                                                                            False: MirroredDistributedStrategy)
+            - data_type         : format of the training data
+            - multi_worker      : flag to decide if the multiple worker training is activated
+            - options           : options of the model
+            - nworkers          : number of workers of the model
+            - cluster_resolver  : SLURM cluster resolver of the multiworker
+            - cluster_spec      : specification of the nodes sharing the multiworker and their atributio as chief,
+                                  worker...
+            - prefetch          : number of batches to load in memory
+        * Classes
+            - strategy          : strategy to use for the multiple gpu. Three different strategies can be used
+                                  (MirroredStrategy, CentralStorageStrategy and MultiWorkerMirroredStrategy)
+            - model             : Deep Learning model
+    .....................................................................................................................
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Parameters
+        ----------
+        data_in : dict, dictionary containing all the information required for the neural network
+            DESCRIPTION. The default is {"uvw_folder":"../P125_21pi_vu/",
+                                         "uvw_file":"P125_21pi_vu.$INDEX$.h5.uvw","padding":15,
+                                         "dx":1,"dy":1,"dz":1,"data_folder":"data","umeanfile":"Umean.txt"
+                                         "unorm_file":"Unorm.txt","L_x":2*np.pi,"L_z":np.pi,"L_y":1,
+                                         "uvw_folder_tf":"../../P125_21pi_vu_tf",
+                                         "uvw_folderii_tf":"P125_21pi_vu.$INDEX$",
+                                         "rey":125,"utau":0.060523258443963,"ssh_flag_train":False,
+                                         "uvw_folder_temp":"-","ssh_server":"-","ssh_username":"-","ssh_password":"-"}.
+            Data:
+                - uvw_folder      : folder of the velocity fields
+                - uvw_file        : file name of the velocity fileds without index
+                - padding         : padding of the fields
+                - dx              : downsampling in x
+                - dy              : downsampling in y
+                - dz              : downsampling in z
+                - data_folder     : folder for storing the data of the model
+                - umean_file      : file of the mean velocity
+                - unorm_file      : file for the normalization of the velocity
+                - L_x             : size of the channel in the streamwise direction
+                - L_z             : size of the channel in the spanwise dirction
+                - L_y             : half of the width of the channel
+                - uvw_folder_tf   : folder of the velocity fields with the tensorflow format
+                - uvw_folderii_tf : file of the velocity fields with the tensorflow format
+                - rey             : friction reynolds number
+                - utau            : friction velocity
+                - ssh_flag_train  : flag determining if ssh connection should be activated. If the connection is 
+                                    activated the files used in the training are read from the remote server
+                - uvw_folder_temp : temporal forlder for storing the files
+                - ssh_server      : server to read using the ssh connection
+                - ssh_username    : username of the server
+                - ssh_password    : password of the server user
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # define_model
+        .................................................................................................................
+        Function for defining the model, read all the information regarding the training and the unet
+        and then defines the model and distributes the training in the different GPUs. In this function the model
+        is created for multiworker strategies.
+        Parameters
+        ----------
+        data_in : dict, dictionary containing the data required for the training
+            DESCRIPTION. The default is {"ngpu":None,"learat":1e-3,"optmom":0.9,"batch_size":8,"field_ini":1000,
+                                         "field_fin":7000,"field_mem":320,"epoch_save":200,
+                                         "epoch_max":2e4,"read_model":False,"model_folder":"models",
+                                         "model_name":"trained_model.h5","nfil":16,"stride":1,"activation":"relu",
+                                         "kernel":3,"pooling":2,"delta_pred":1,"hist_file":"hist.txt","test_size":0.2,
+                                         "adapt_batch":True,"prep_data":True,"flag_model":True,"flag_central":True,
+                                         "data_type":"float32","multi_worker":True,"prefetch":1}.
+            Data:
+                - ngpu         : number of GPUs
+                - learat       : learning ratio of the training
+                - optmom       : momentum of the RMSprop algorithm
+                - batch_size   : batch size of the training
+                - field_ini    : initial field for the training
+                - field_fin    : final fields for the training
+                - field_mem    : number of fields load in memory
+                - epoch_save   : number of epoch for saving the solution during the training
+                - epoch_max    : number of epoch of the training before refreshing the data loaded in the memory
+                - read_model   : flag to define if the model has to be created or read
+                - model_folder : folder for the models
+                - model_name   : name of the model file
+                - nfil         : number of filters of the first layer of the unet
+                - stride       : stride of the unet
+                - activation   : activation function
+                - kernel       : kernel size
+                - pooling      : size of the poolings
+                - delta_pred   : distance between the input field and the output field for the default database the
+                                 distance is 5 viscous units
+                - hist_file    : file for saving the history of the training
+                - test_size    : percentage of the data used for testing during training (value between 0 and 1)
+                - adapt_batch  : flag for adapting the fields read to the batch size of the strategy
+                - prep_data    : flag for selecting prepared data (True) or non prepared data (False)
+                - flag_model   : flag for selecting if the model needs to be created (True: create it,
+                                                                                      Flase: do not create it)
+                - flag_central : flag to choose the segmentation strategy (True: CentralStorageStrategy,
+                                                                           False: MirroredDistributedStrategy)
+                - data_type    : format of the training data
+                - multi_worker : flag to decide if the multiple worker training is activated
+                - prefetch     : number of batches loaded in memory
+                
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # create_model
+        .................................................................................................................
+        Function to create the model within the segmentation
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # model_base
+        .................................................................................................................
+        Function to define the model used for the problem
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # train_model
+        .................................................................................................................
+        Function to generate the training of the model. This function calls the functions for reading the data
+        normalizes it and then trains the model
+        
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # prepare_data
+        .................................................................................................................
+        Function to prepare the data for the training. This function creates a new folder with the data of the uvw 
+        files with the tensorflow format.
+
+        Returns
+        -------
+        None.
+
+        
+  
+        .................................................................................................................
+        # architecture_Unet
+        .................................................................................................................      
+        Function for defining the architecture of the artificial neural network
+
+        Parameters
+        ----------
+        x_in : tensorflow tensor
+            Tensor containing the input field.
+
+        Returns
+        -------
+        x_out : tensorflow tensor
+            Tensor containing the output field.
+
+        
+
+        ................................................................................................................
+        # check_data
+        ................................................................................................................
+        Function to check the data for the training do not present errors. This function creates a new folder with the
+        data of the uvw files with the tensorflow format.
+
+        Returns
+        -------
+        None.
+
+        
+#  11.1.2)
+
+-------------------------------------------------------------------------------------------------------------------------
+flow_field.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Mon Mar 25 11:07:26 2024
+
+@author: Andres Cremades Botella
+
+File to read the geometric characteristics of the data. The file contains a class:
+    Class:
+        - flow_field: class containing the information of the flow field. The class has the following functions
+
+
+    .....................................................................................................................
+    # flow_field: Class to calculate and store the geometrical characteristics of the flow field. The class contains
+                  the following
+    functions:
+        * Functions:
+            - __init__     : initialization function
+            - shape_tensor : function to calculate the shape of the tensors of the flow field
+            - flow_grid    : calculate the geometry of the mesh of the fluid flow
+        * Variables:
+            - folder       : folder of the flow fields
+            - file         : file of the flow fields
+            - dx           : downsampling in the streamwise direction
+            - dy           : downsampling in the wall-normal direction
+            - dz           : downsampling in the spanwise direction
+            - L_x          : dimension of the channel in the streamwise direction
+            - L_y          : dimension of the channel in the wall-normal direction
+            - L_z          : dimension of the channel in the spanwise direction
+            - rey          : friction reynolds number
+            - utau         : friction velocity
+            - mx           : grid points in x
+            - my           : grid points in y
+            - mz           : grid points in z
+            - ygrid        : grid points along the wall-normal direction
+            - shpx         : shape of the tensors in the streamwise direction
+            - shpy         : shape of the tensors in the wall-normal direction
+            - shpz         : shape of the tensors in the spanwise direction
+            - delta_x      : size of the grid in the streamwise direction
+            - delta_y      : size of the grid in the wall-normal direction
+            - delta_z      : size of the grid in the spanwise direction
+            - delta_x_plus : size of the grid in the streamwise direction in wall units
+            - delta_y_plus : size of the grid in the wall-normal direction in wall units
+            - delta_z_plus : size of the grid in the spanwise direction in wall units
+            - y_h          : grid in the wall-normal direction
+            - x_h          : grid in the streamwise direction
+            - z_h          : grid in the spanwise direction
+            - yl_s         : index of the midchannel for the lower part. Use it like this for extracting the points
+                             located in the lower part [:self.yl_s]
+            - yu_s         : index of the midchannel for the upper part. Use it like this for extracting the points
+                             located in the upper part [self.yu_s:]
+            - yplus        : wall-normal coordinates
+            - xplus        : streamwise coordinates
+            - zplus        : spanwise coordinates
+            - vol_h        : volume of the grid points
+            - vol_plus     : volume of the grid points in viscous units
+            - voltot       : total volume of the channel
+            - voltot_plus  : total volume of the channel in viscous units
+    .....................................................................................................................
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Function to initialize the flow class. The funtion reads the input information required for obtaining the
+        geometrical characteristics.
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data required for obtaining the geometry of the flow.
+            The default is {"folder":"../P125_21pi_vu/","file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                            "dx":1,"dy":1,"dz":1,"L_x":2*np.pi,"L_z":np.pi,
+                            "rey":125,"utau":0.060523258443963}.
+            Data:
+                - folder : folder of the flow fields
+                - file   : file of the flow fields
+                - dx     : downsampling in the streamwise direction
+                - dy     : downsampling in the wall-normal direction
+                - dz     : downsampling in the spanwise direction
+                - L_x    : dimension of the channel in the streamwise direction
+                - L_y    : dimension of the channel in the wall-normal direction
+                - L_z    : dimension of the channel in the spanwise direction
+                - rey    : friction reynolds number
+                - utau   : friction velocity
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # shape_tensor
+        .................................................................................................................
+        Function to calculate the shape of the tensors after applying the downsampling
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # flow_grid
+        .................................................................................................................
+        Function to calculate the shape of the tensors after applying the downsampling
+
+        Returns
+        -------
+        None.
+
+        
+#  11.1.3)
+
+-------------------------------------------------------------------------------------------------------------------------
+plot_format.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 12:39:52 2024
+
+@author:  Andres Cremades Botella
+
+File to define plots format. The file includes a class:
+    - Class:
+        - plot_format : class containing the figure options.
+
+
+    .....................................................................................................................
+    # plot_format: Class generating the format for the plots.
+        * Functions:
+            - __init__      : initialization of the class
+            - create_figure : function to create the figure
+            - add_plot_2d   : function to add a curve to a plot
+            - plot_layout   : function to add format to a plot
+            - plot_save_png : function to save the figure in png
+            - plot_save_pdf : function to save the figure in pdf
+        * Variables:
+            - xlabel        : label of the x axis
+            - ylabel        : label of the y axis
+            - zlabel        : label of the z axis
+            - fontsize      : size of the text in the plot
+            - figsize_x     : size of the figure in the x direction
+            - figsize_y     : size of the figure in the y direction
+            - xscale        : scale of the x axis
+            - yscale        : scale of the y axis
+            - colormap      : colormap of the plot
+            - colornum      : number of colors used in the colormap
+            - legend        : select if using a legend
+            - fig_name      : name of the figure to be saved
+            - dpi           : dots per inch of the image saved
+            - plot_folder   : folder to save the plots
+            - figure        : figure of the plot
+            - plot          : list of the plots added to the figure
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Function to initialize the format of the plots
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data required for generating the plots.
+            The default is {"xlabel":"x","ylabel":"y","zlabel":"z","fontsize":18,"figsize_x":10,
+                            "figsize_y":8,"xscale":"linear","yscale":"linear","colormap":"viridis",
+                            "colornum":1,"legend":False,"fig_name":"fig","dpi":60,"plot_folder":"plots"}.
+            Data:
+                - xlabel      : label of the x axis
+                - ylabel      : label of the y axis
+                - zlabel      : label of the z axis
+                - fontsize    : size of the text in the plot
+                - figsize_x   : size of the figure in the x direction
+                - figsize_y   : size of the figure in the y direction
+                - xscale      : scale of the x axis
+                - yscale      : scale of the y axis
+                - colormap    : colormap of the plot
+                - colornum    : number of colors used in the colormap
+                - legend      : select if using a legend
+                - fig_name    : name of the figure to be saved
+                - dpi         : dots per inch of the image saved
+                - plot_folder : folder to save the plots
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # create_figure
+        .................................................................................................................
+        Function to create the figure
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # add_plot_2d
+        .................................................................................................................
+        Function to add a plot to a figure
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data required for the plot.
+            The default is {"data_x":[],"data_y":[],"label":"plot","color":None}.
+            Data:
+                - data_x      : data for the x variable
+                - data_y      : data for the y variable
+                - label       : name of the curve plotted
+                - color       : color of the curve
+                - linewidth   : width of the lines
+                - plot_number : number of the plot
+                - style       : style of the line of the plot
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # plot_layout
+        .................................................................................................................
+        Function to generate the format of the plots
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # plot_save_png
+        .................................................................................................................
+        Function to save the plots with png format
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # plot_save_pdf
+        .................................................................................................................
+        Function to save the plots with pdf format
+
+        Returns
+        -------
+        None.
+
+        
+#  11.1.4)
+
+-------------------------------------------------------------------------------------------------------------------------
+shap_config.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Apr  4 17:29:12 2024
+
+@author:  Andres Cremades Botella
+
+File to define the deep learning model for the calculation of the SHAP values.
+The file contains a class for the deep learning model for the SHAP values:
+    Class:
+        - deep_model : Class of the deep learning model. The model has the following functions:
+
+
+    .....................................................................................................................
+    # shap_config: Class containing the information of the shap model.
+        * Functions:
+            - __init__           : initialization of the class. Read data of the flow, the gpus used, path to the 
+                                   data...  
+            - calc_gradientSHAP  : function to calculate the GradientExplainer. Defines the model and obtains the SHAP
+                                   values.
+            - write_shap         : function to save the SHAP values in a file.
+            - read_shap          : function to read the SHAP values stored in a file
+            - gradientSHAP_model : function to define the SHAP model
+            - model_base_shap    : function to define the base model for the SHAP without the weights
+            - background         : function to calculate the background of the SHAP values model
+            - architecture_Unet  : function for defining the strategy
+        * Variables:
+            - shap_folder        : folder for the shap values
+            - shap_file          : file for the shap values
+            - uvw_folder         : folder of the flow fields
+            - uvw_file           : file of the flow fields
+            - padding            : padding of the flow field
+            - dx                 : downsampling of the flow field in the streamwise direction
+            - dy                 : downsampling of the flow field in the wall-normal direction
+            - dz                 : downsampling of the flow field in the spanwise direction
+            - data_folder        : folder of the generated data
+            - umean_file         : file of the mean velocity
+            - unorm_file         : file of the normalization
+            - L_x                : size of the channel in the streamwise direction
+            - L_z                : size of the channel in the spanwise direction
+            - L_y                : size of the channel in the wall-normal direction
+            - rey                : friction Reynolds number
+            - utau               : friction velocity
+            - ngpu               : number of gpus
+            - field_ini          : initial field of the SHAPs
+            - field_fin          : final field of the SHAPs
+            - field_delta        : separation between the fields
+            - model_folder       : folder for storing the models
+            - model_name         : name of the model
+            - nfil               : number of filters of the model CNN
+            - stride             : stride of the model CNN
+            - activation         : activation function of the model CNN
+            - kernel             : kernel of the model CNN
+            - pooling            : size of the poolings
+            - delta_pred         : number of fields to advance the predictions
+            - nsamples           : number of samples to take to calculate the SHAP values in the gradient explainer
+            - nsamples_max       : maximum number of samples to calculate at the same time in the gradient explainer
+            - shpx               : shape of the tensors in the streamwise direction
+            - shpy               : shape of the tensors in the wall-normal direction
+            - shpz               : shape of the tensors in the spanwise direction
+            - weights            : weights of the trained model
+            - inputs             : inputs for the definition of the model
+            - outputs            : outputs for the definition of the model
+        * Classes:
+            - strategy           : segmentation strategy of the model used for the SHAP calculation
+            - model_train        : model trained for the flow prediction
+            - model              : model for the SHAP values calculation
+    .....................................................................................................................
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Function to initialize the shap model.
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Function to initialize the SHAP model.
+            The default is {"shap_folder":"../../P125_21pi_vu_SHAP_gradient/",
+                            "shap_file":"P125_21pi_vu_nsamples$NSAMPLES$.$INDEX$.h5.shap",
+                            "uvw_folder":"../../P125_21pi_vu/","uvw_file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                            "padding":15,"dx":1,"dy":1,"dz":1,"data_folder":"data","umean_file":"Umean.txt",
+                            "unorm_file":"Unorm.txt","L_x":2*np.pi,"L_z":np.pi,"L_y":1,
+                            "rey":125,"utau":0.060523258443963,"ngpu":None,"field_ini":1000,"field_fin":7000,
+                            "field_delta":1,"model_folder":"models","model_name":"trained_model.h5","nfil":16,
+                            "stride":1,"activation":"relu","kernel":3,"pooling":2,"delta_pred":1,"nsamples":200,
+                            "nsamples_max":100,"data_type":"float32"}.
+            Data:
+                - shap_folder     : folder for the shap values
+                - shap_file       : file for the shap values
+                - uvw_folder      : folder of the flow fields
+                - uvw_file        : file of the flow fields
+                - padding         : padding of the flow field
+                - dx              : downsampling of the flow field in the streamwise direction
+                - dy              : downsampling of the flow field in the wall-normal direction
+                - dz              : downsampling of the flow field in the spanwise direction
+                - data_folder     : folder of the generated data
+                - umean_file      : file of the mean velocity
+                - unorm_file      : file of the normalization
+                - L_x             : size of the channel in the streamwise direction
+                - L_z             : size of the channel in the spanwise direction
+                - L_y             : size of the channel in the wall-normal direction
+                - rey             : friction Reynolds number
+                - utau            : friction velocity
+                - ngpu            : number of gpus
+                - field_ini       : initial field of the SHAPs
+                - field_fin       : final field of the SHAPs
+                - field_delta     : separation between the fields
+                - model_folder    : folder for storing the models
+                - model_name      : name of the model
+                - nfil            : number of filters of the model CNN
+                - stride          : stride of the model CNN
+                - activation      : activation function of the model CNN
+                - kernel          : kernel of the model CNN
+                - pooling         : size of the poolings
+                - delta_pred      : number of fields to advance the predictions
+                - nsamples        : number of samples to take to calculate the SHAP values in the gradient explainer
+                - nsamples_max    : maximum number of samples to calculate at the same time in the gradient explainer
+                - data_type       : type of data used in the model
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # calc_gradientSHAP
+        .................................................................................................................
+        Function to calculate the gradient SHAP values
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # write_shap
+        .................................................................................................................
+        Function to save the SHAP values in a file.
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data required for saving the SHAP values.
+            The default is {"shap_values_u":[],"shap_values_v":[],"shap_values_w":[],"index":0}.
+            Data:
+                - shap_values_u : component u of the SHAP values
+                - shap_values_v : component v of the SHAP values
+                - shap_values_w : component w of the SHAP values
+                - index         : index of the flow field
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # read_shap
+        .................................................................................................................
+        Function to read the SHAP values
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data to read the SHAP values file.
+            The default is {"index":0}.
+            Data:
+                - index : index of the file to save
+
+        Returns
+        -------
+        data_out : dict
+            Data from the SHAP values file.
+            Data:
+                - SHAP_u : SHAP values of the field u
+                - SHAP_v : SHAP values of the field v
+                - SHAP_w : SHAP values of the field w
+
+        
+
+        .................................................................................................................
+        # gradientSHAP_model
+        .................................................................................................................
+        Function to define the gradientSHAP model
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            data for the shap model.
+            The default is {"field_out":[]}.
+            Data:
+                - field_out : ouput field taken from dataset
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # model_base_shap
+        .................................................................................................................
+        Function to define the model used for the problem
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            data for the shap model.
+            The default is {"field_out":[]}.
+            Data:
+                - field_out : ouput field taken from dataset
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # background
+        .................................................................................................................
+        Function to calculate the background values
+
+        Returns
+        -------
+        None.
+
+        
+#  11.1.5)
+
+-------------------------------------------------------------------------------------------------------------------------
+structures.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Apr  3 12:01:42 2024
+
+@author: Andres Cremades Botella
+
+File to define the coherent structures. The file contains a class for the coherent structures:
+    Class:
+        - structures : Class of the coherent structures.
+
+
+    .....................................................................................................................
+    # structures: Class containg the information of the coherent structures. The structure has the following functions:
+        * Functions:
+            - __init__                      : initialization of the class
+            - separate_structures           : function for obtaining the nodes of each structure
+            - physicalproperties_structures : function for defining the physical properties of the coherent structures
+            - detect_quadrant               : function for detecting the quadrant of the structures
+            - segmentation                  : function to generate a segmentation mask according with the structures
+            - structure_u1u2                : function to calculate the product of the field in the dimensions 1 and 2
+                                              of the flow field for each structure
+            - structure_shap                : function for calculating the total SHAP of the structure
+        * Variables:
+            - mat_struc            : matrix of the grid-points contained in a structure (1 if contained, 
+                                                                                         0 if not contained)
+            - field_1              : field in the direction 1
+            - field_2              : field in the direction 2
+            - flag_sign            : flag to separe the structures depending of the sign of the fields
+            - uvw_folder           : folder of the flow fields
+            - uvw_file             : file of the flow fields
+            - dx                   : downsampling in the streamwise direction
+            - dy                   : downsampling in the wall-normal direction
+            - dz                   : downsampling in the spanwise direction
+            - L_x                  : size of the channel in the streamwise direction
+            - L_y                  : size of the channel in the wall-normal direction
+            - L_z                  : size of the channel in the spanwise direction
+            - rey                  : friction Reynolds number
+            - utau                 : friction velocity
+            - sym_quad             : flag for defining if the quadrant classification needs to be done by making a 
+                                     simetry in the second direction
+            - filvol               : volume for filtering the structures
+            - shap_folder          : folder of the SHAP values
+            - shap_file            : file of the SHAP values
+            - y_h_plus             : grid of the channel in the wall-normal direction
+            - grid_dx_plus         : size of the mesh elements in the streamwise direction
+            - grid_dz_plus         : size of the mesh elements in the spanwise direction
+            - grid_vol_plus        : volume of the grid elements
+            - shpx                 : shape of the tensors in the streamwise direction
+            - shpy                 : shape of the tensors in the wall-normal direction
+            - shpz                 : shape of the tensors in the spanwise direction
+            - nodes                : list containing the grid-points of each coherent structure
+            - dim_x                : size of the structure in the streamwise direction
+            - dim_y                : size of the structure in the wall-normal direction
+            - dim_z                : size of the structure in the spanwise direction
+            - ymin                 : minimum wall distance of the structure
+            - ymax                 : maximum wall distance of the structure
+            - boxvol               : volume of the box containing the structure
+            - vol                  : volume of the structure
+            - cg_x                 : position of the center of gravity in x
+            - cg_z                 : position of the center of gravity in z
+            - cg_y                 : position of the center of gravity in y
+            - cg_xbox              : position of the center of gravity of the box in x
+            - cg_zbox              : position of the center of gravity of the box in z
+            - cg_ybox              : position of the center of gravity of the box in y
+            - mat_event            : matrix of the events of each nodes
+            - event                : event of each structure
+            - mat_segment          : matrix containing the segmentation of the domain
+            - mat_segment_filtered : matrix containing the segementation of the domain after filtering smaller
+                                     structures
+            - filtstr_sum          : total percentage of structures that have been filtered
+    .....................................................................................................................
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Function to initialize the structure class
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data for creating the structues. 
+            The default is {"mat_struc":[],"field_1":[],"field_2":[],"flag_sign":True,
+                            "uvw_folder":"../../P125_21pi_vu/","uvw_file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                            "dx":1,"dy":1,"dz":1,"L_x":2*np.pi,"L_y":1,"L_z":np.pi,"rey":125,
+                            "utau":0.060523258443963,"sym_quad":True,"filvol":2.7e4,
+                            "shap_folder":"../../P125_21pi_vu_SHAP_UnetXAI_gradient/",
+                            "shap_file":"P125_21pi_vu.$INDEX$.h5.shap"}.
+            Data:
+                - mat_struc   : matrix of the grid-points contained in a structure (1 if contained, 0 if not contained)
+                - field_1     : field in the direction 1
+                - field_2     : field in the direction 2
+                - flag_sign   : flag to separe the structures depending of the sign of the fields
+                - uvw_folder  : folder of the flow fields
+                - uvw_file    : file of the flow fields
+                - dx          : downsampling in the streamwise direction
+                - dy          : downsampling in the wall-normal direction
+                - dz          : downsampling in the spanwise direction
+                - L_x         : size of the channel in the streamwise direction
+                - L_y         : size of the channel in the wall-normal direction
+                - L_z         : size of the channel in the spanwise direction
+                - rey         : friction Reynolds number
+                - utau        : friction velocity
+                - sym_quad    : flag for defining if the quadrant classification needs to be done by making a simetry 
+                                in the second direction
+                - filvol      : volume for filtering the structures
+                - shap_folder : folder of the SHAP values
+                - shap_file   : file of the SHAP values
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # separate_structures
+        .................................................................................................................
+        Function to separate the different coherent structures.
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # physicalproperties_structures
+        .................................................................................................................
+        Function to calculate the physical properties of the different coherent structures.
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # detect_quadrant
+        .................................................................................................................
+        Function for calculating the quadrant of each structures and a matrix with the quadrant of each node
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # segmentation
+        .................................................................................................................
+        Function for segmenting the domain according with the structures
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # structure_u1u2
+        .................................................................................................................
+        Function to calculate the product of the field in the dimensions 1 and 2 of the flow field for each structure
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # structure_shap
+        .................................................................................................................
+        Function for calculating the total SHAP of the structure
+
+        Returns
+        -------
+        None.
+
+        
+#  11.1.6)
+
+-------------------------------------------------------------------------------------------------------------------------
+uv_structures.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Apr  3 15:02:00 2024
+
+@author: Andres Cremades Botella
+
+File to define the uv structures:
+    Class:
+        - uv_structure : Class of the Reynolds stress coherent structures.
+
+
+    .....................................................................................................................
+    # uv_structure: Class of the Reynolds stress coherent structures.
+        * Functions:
+            - __init__ : initialization function
+            - calculate_matstruc : calculate the matrix containing the nodes included in the transverse Reynolds stress
+                                   structures.
+            - segment_struc      : calculates the segmentation of the domain based on the transverse Reynolds stress
+                                   structures.
+            - save_struc         : function to save the structures
+            - read_struc         : function to read the structures
+        * Variables:
+            - uvw_folder  : folder of the velocity flow fields
+            - uvw_file    : file of the velocity flow fields
+            - Hperc       : percolation index
+            - index       : index of the field to read
+            - dx          : downsampling in the streamwise direction
+            - dy          : downsampling in the wall-normal direction
+            - dz          : downsampling in the streamwise direction
+            - L_x         : streamwise dimension of the channel
+            - L_y         : wall-normal dimension of the channel
+            - L_z         : spanwise dimension of the channel
+            - rey         : friction Reynolds number
+            - utau        : frictin velocity
+            - padding     : padding of the fields
+            - data_folder : folder containing the data generated by the code
+            - umean_file  : mean velocity file
+            - urms_file   : rms velocity file
+            - sym_quad    : flag fo using the symmetry of the direction 2 of the field for calculating the quadrant
+                            of the structure
+            - filvol      : volume for filtering the structures
+            - shap_folder : folder of the SHAP values
+            - shap_file   : file of the SHAP values
+            - folder      : folder to save the uv structures
+            - file        : file to save the uv structures
+            - shpy        : shape of the tensors in the wall-normal direction
+            - shpx        : shape of the tensors in the streamwise direction
+            - shpz        : shape of the tensors in the spanwise direction
+            - mat_struc   : matrix defining the nodes contained in the structures
+            - field_u     : field of the streamwise velocity
+            - field_v     : field of the wall-normal velocity
+        * Classes:
+            - structures  : class containing the structure information (read from py_bin.py_class.structures)
+    .....................................................................................................................
+    
+
+        .................................................................................................................
+        # __init__
+        .................................................................................................................
+        Function to initilize the uv structures.
+
+        Parameters
+        ----------
+        data_in : dict, optional
+            Data for initilizing the uv structure.
+            The default is {"uvw_folder":"../../P125_21pi_vu/","uvw_file":"P125_21pi_vu.$INDEX$.h5.uvw","Hperc":1.75,
+                            "index":7000,"dx":1,"dy":1,"dz":1,"L_x":2*np.pi,"L_y":1,"L_z":np.pi,"rey":125,
+                            "utau":0.060523258443963,"padding":15,"data_folder":"Data","umean_file":"Umean.txt",
+                            "filvol":2.7e4,"shap_folder":"../../P125_21pi_vu_SHAP_UnetXAI_gradient/",
+                            "shap_file":"P125_21pi_vu.$INDEX$.h5.shap","folder":"../../P125_21pi_vu_Qstruc/",
+                            "file":"P125_21pi_vu.$INDEX$.h5.Q"}.
+            Data:
+                - uvw_folder  : folder of the velocity flow fields
+                - uvw_file    : file of the velocity flow fields
+                - Hperc       : percolation index
+                - index       : index of the field to read
+                - dx          : downsampling in the streamwise direction
+                - dy          : downsampling in the wall-normal direction
+                - dz          : downsampling in the streamwise direction
+                - L_x         : streamwise dimension of the channel
+                - L_y         : wall-normal dimension of the channel
+                - L_z         : spanwise dimension of the channel
+                - rey         : friction Reynolds number
+                - utau        : frictin velocity
+                - padding     : padding of the fields
+                - data_folder : folder containing the data generated by the code
+                - umean_file  : mean velocity file
+                - urms_file   : rms velocity file
+                - sym_quad    : flag fo using the symmetry of the direction 2 of the field for calculating the quadrant
+                                of the structure
+                - filvol      : volume for filtering the structures
+                - shap_folder : folder of the SHAP values
+                - shap_file   : file of the SHAP values
+                - folder      : folder to save the uv structures
+                - file        : file to save the uv structures
+        Returns
+        -------
+        None.
+
+        
+        
+        .................................................................................................................
+        # calculate_matstruc
+        .................................................................................................................
+        Function to calculate the matrix of the nodes belonging a structure
+
+        Returns
+        -------
+        None.
+
+        
+       
+        .................................................................................................................
+        # segment_struc
+        ................................................................................................................. 
+        Function to segment the domain into the different structures
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # save_struc
+        .................................................................................................................
+        Function to save the parameters of the structure
+
+        Returns
+        -------
+        None.
+
+        
+
+        .................................................................................................................
+        # read_struc
+        .................................................................................................................
+        Function to read the parameters of the structure
+
+        Returns
+        -------
+        None.
+
+        
+
+# 11.2):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_functions]
+    This folder is used for storing python code related to the functions used in the calculations
+..........................................................................................................................
+
+#  11.2.1)
+
+-------------------------------------------------------------------------------------------------------------------------
+CNNblock_definition.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 21 12:55:17 2024
+
+@author: Andres Cremades Botella
+
+File for defining the blocks of the DL model. The file contains the following functions:
+    Functions:
+        - block    : function for defining the convolutional block: CNN+BN+Activation
+        - invblock : function for defining the inverse convolutional block: CNN transpose+BN+Activation
+
+
+    .....................................................................................................................
+    # block: function for defining the convolutional block: CNN+BN+Activation.
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for defining the block.
+        The default is {"xx":[],"nfil":16,"stride":1,"activ":"relu","kernel":3}.
+        Data:
+            - input  : tensor with the input of the layer
+            - nfil   : number of filters of the layer
+            - stride : stride of the layer
+            - activ  : activation function of the layer
+            - kernel : kernel used for the convolution
+
+    Returns
+    -------
+    data_out : dict
+        Data of the output of the block.
+        Data:
+            - output : tensor with the output of the layer
+
+    
+
+    .....................................................................................................................
+    # invblock: function for defining the inverse convolutional block: CNN transpose+BN+Activation.
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for defining the block.
+        The default is {"input":[],"nfil":16,"stride":1,"activ":"relu","kernel":3,"outpad":(0,0,0)}.
+        Data:
+            - input  : tensor with the input of the layer
+            - nfil   : number of filters of the layer
+            - stride : stride of the layer
+            - activ  : activation function of the layer
+            - kernel : kernel used for the convolution
+            - outpad : padding to adjust the size of the output
+
+    Returns
+    -------
+    data_out : dict
+        Data of the output of the block.
+        Data:
+            - output : tensor with the output of the layer
+
+    
+#  11.2.2)
+
+Created on Wed Apr 17 11:58:30 2024
+
+@author:  Andres Cremades Botella
+
+Functions extracted from the tensorflow tutorials to save the checkpoint of a multiworker
+https://www.tensorflow.org/tutorials/distribute/multi_worker_with_ctl
+
+#  11.2.3)
+
+-------------------------------------------------------------------------------------------------------------------------
+norm_velocity.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Fri Mar 22 11:59:50 2024
+
+@author:  Andres Cremades Botella
+
+File to normalize the velocity fields. The normalization generates values between 0 and 1 using the minimum and the 
+maximum of the velocity values. The file contains the following functions:
+    Functions:
+        - norm_velocity : function for normalize the velocity
+        - dim_velocity  : function for dimensionalize the velocity
+
+
+    .....................................................................................................................
+    # norm_velocity: function for normalize the velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for the normalization of the velocity.
+        The default is {"uu":[],"vv":[],"ww":[],"folder_data":"Data","unorm_file":"norm.txt","data_type":"float32"}.
+        Data:
+            - uu          : streamwise velocity
+            - vv          : wall-normal velocity
+            - ww          : spanwise velocity
+            - folder_data : path to the folder containing the normalization
+            - unorm_file  : file with the normalization values
+            - data_type   : type of the data (float32,float16...)
+
+    Returns
+    -------
+    data_out : dict
+        Normalized velocity. The velocity is configured in float16 to save memory during the training
+        Data:
+            - unorm : streamwise normalized velocity
+            - vnorm : wall-normal normalized velocity
+            - wnorm : spanwise normalized velocity
+
+    
+
+    .....................................................................................................................
+    # dim_velocity: function for dimensionalize the velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for the non-normalization of the velocity.
+        The default is {"unorm":[],"vnorm":[],"wnorm":[],"folder_data":"Data","unorm_file":"norm.txt",
+                        "data_type":"float32"}.
+        Data:
+            - unorm       : streamwise velocity
+            - vnorm       : wall-normal velocity
+            - wnorm       : spanwise velocity
+            - folder_data : path to the folder containing the normalization
+            - unorm_file  : file with the normalization values
+            - data_type   : type of the data (float32,float16...)
+
+    Returns
+    -------
+    data_out : dict
+        Normalized velocity. The velocity is configured in float16 to save memory during the training
+        Data:
+            uu : streamwise normalized velocity
+            vv : wall-normal normalized velocity
+            ww : spanwise normalized velocity
+
+    
+#  11.2.4)
+
+-------------------------------------------------------------------------------------------------------------------------
+normalization.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Fri Mar 22 12:33:24 2024
+
+@author: Andres Cremades Botella
+
+File to create the normalization values for the velocity fields. The normalization generates 
+values between 0 and 1 using the minimum and the maximum of the velocity values. The file contains
+the following functions:
+    Functions:
+        - save_norm : function for saving the normalization to a file
+        - read_norm : function for reading the normalization file
+        - calc_norm : function for calculating the normalization
+
+
+    .....................................................................................................................
+    # save_norm: function for saving the normalization to a file. The function saves the maximum and minimum values
+                 of the velocity components and stress components
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for saving the normalization values. 
+        The default is {"folder":data,"file":"norm.txt","uumax":0,"vvmax":0,"wwmax":0,"uumin":0,"vvmin":0,
+                         "wwmin":0,"uvmax":0,"vwmax":0,"uwmax":0,"uvmin":0,"vwmin":0,"uwmin":0}.
+        Data:
+            - folder : folder of the generated data
+            - file   : file of the normalization data
+            - uumax  : maximum streamwise velocity
+            - vvmax  : maximum wall-normal velocity
+            - wwmax  : maximum spanwise velocity
+            - uumin  : minimum streamwise velocity
+            - vvmin  : minimum wall-normal velocity
+            - wwmin  : minimum spanwise veloctiy
+            - uvmax  : maximum uv stress
+            - vwmax  : maximum vw stress
+            - uwmax  : maximum uw stress
+            - uvmin  : minimum uv stress
+            - vwmin  : minimum vw stress
+            - uwmin  : minimum uw stress
+    Returns
+    -------
+    None.
+    
+
+    .....................................................................................................................
+    # read_norm: function for reading the normalization file. The function reads the maximum and minimum values
+                 of the velocity components and stress components
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for the normalization of the velocity data. 
+        The default is {folder:"Data",file:"norm.txt"}.
+        Data:
+            - folder : folder to read the data
+            - file   : file to read the data
+
+    Returns
+    -------
+    dict
+        Data of the maximum and minimum values for the normalization.
+        Data:
+            - uumax : maximum streamwise velocity
+            - vvmax : maximum wall-normal velocity
+            - wwmax : maximum spanwise velocity
+            - uumin : minimum streamwise velocity
+            - vvmin : minimum wall-normal velocity
+            - wwmin : minimum spanwise velocity
+            - uvmax : maximum uv stress
+            - vwmax : maximum vw stress
+            - uwmax : maximum uw stress
+            - uvmin : minimum uv stress
+            - vwmin : minimum vw stress
+            - uwmin : minimum uw stress
+
+    
+
+    .....................................................................................................................
+    # calc_norm: function to calculate the normalization of the velocity. The function calculates the maximum and 
+                 minimum values of the velocity components and stress components
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for normalizing the velocity.
+        The default is {"field_ini":1000,"field_fin":9999,"data_folder":"Data","umean_file"="Umean.txt",
+                        "dx":1,"dy":1,"dz":1,"folder":"../P125_21pi_vu","file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                        "shpx":192,"shpy":201,"shpz":96,"padding":15,"save_file":True,"unorm_file":"norm.txt"}.
+        Data:
+            - field_ini   : initial field of the data to calculate the normalization
+            - field_fin   : final field of the data to calculate the normalization
+            - data_folder : folder to store the data calculated by the code
+            - umean_file  : file of the mean velocity
+            - dx          : downsampling of x direction
+            - dy          : downsampling of y direction
+            - dz          : downsampling of z direction
+            - folder      : folder of the velocity data
+            - file        : file of the velocity data without index
+            - shpx        : shape of the tensor in x
+            - shpy        : shape of the tensor in y
+            - shpz        : shape of the tensor in z
+            - save_file   : flag to save the normalization in a file
+            - unorm_file  : file of the normalization data
+            
+
+    Returns
+    -------
+    dict
+        Data for the normalization. Only returns it in case of not saving a file
+        Data:
+            - uumax : maximum streamwise velocity
+            - vvmax : maximum wall-normal velocity
+            - wwmax : maximum spanwise velocity
+            - uumin : minimum streamwise velocity
+            - vvmin : minimum wall-normal velocity
+            - wwmin : minimum spanwise velocity
+            - uvmax : maximum uv stress
+            - vwmax : maximum vw stress
+            - uwmax : maximum uw stress
+            - uvmin : minimum uv stress
+            - vwmin : minimum vw stress
+            - uwmin : minimum uw stress
+    
+#  11.2.5)
+
+-------------------------------------------------------------------------------------------------------------------------
+read_norm_velocity.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Fri Apr  5 10:39:47 2024
+
+@author: Andres Cremades Botella
+
+File to read and normalize the flow field. 
+    Functions:
+        - read_norm_velocity : reads the flow and normalize the values
+
+
+    .....................................................................................................................
+    # read_norm_velocity: Function to read and normalize the velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data required for reading and normalizing the velocity.
+        The default is {"folder":"../../P125_21pi_vu","file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                                "padding":15,"shpx":1,"shpy":1,"shpz":1,"dx":1,"dy":1,"dz":1,
+                                "data_folder":"Data","umean_file":"Umean.txt","unorm_file":"Unorm.txt",
+                                "index":7000,"data_type":"float32"}.
+        Data:
+            - folder      : folder to read the data of the velocity fields
+            - file        : file to read the data of the velocity fields
+            - padding     : padding of the fields
+            - shpx        : shape of the fields in x
+            - shpy        : shape of the fields in y
+            - shpz        : shape of the fields in z
+            - dx          : downsampling in x
+            - dy          : downsampling in y
+            - dz          : downsampling in z
+            - data_folder : folder to store the data generated by the code
+            - umean_file  : mean velocity file
+            - unorm_file  : file for the normalization of the velocity
+            - index       : index of the velocity field to read
+            - data_type   : definition of the type of data (float32, float16)
+
+    Returns
+    -------
+    dict
+        Data containing the normalized velocity and the time required for reading the field and calculating
+        the normalization.
+        Data:
+            - norm_velocity : normalized velocity
+            - time_read     : time for reading the file
+            - time_norm     : time for normalizing the field
+
+    
+#  11.2.6)
+
+-------------------------------------------------------------------------------------------------------------------------
+read_velocity.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 21 15:18:38 2024
+
+@author: Andres Cremades Botella
+
+File to read the data of the velocity fields. The file contains the following functions:
+    Functions:
+        - read_velocity : file to read the velocity
+
+
+    .....................................................................................................................
+    # read_velocity: Function to read the velocity, the function generates three arrays containing the velocities in
+                     the streamwise (uu), wall-normal (vv) and spanwise (ww) directions
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : TYPE, optional
+        DESCRIPTION. The default is {"folder":"../P125_21pi_vu","file":"P125_21pi_vu.$INDEX$.h5.uvw","index":1000,
+                                     "dx":1,"dy":1,"dz":1,"shpx":196,"shpy":201,"shpz":96,"padding":15
+                                     "data_folder":"Data","umean_file":"Umean.txt"}.
+        Data:
+            - folder      : folder of the velocity data
+            - file        : file of the velocity data without the index
+            - index       : index of the velocity data file
+            - dx          : downsampling in x
+            - dy          : downsampling in y
+            - dz          : downsampling in z
+            - shpx        : shape in x of the tensors
+            - shpy        : shape in y of the tensors
+            - shpz        : shape in z of the tensors
+            - padding     : padding of the fields
+            - data_folder : folder to store generated data
+            - umean_file  : file of the mean velocity
+    Returns
+    -------
+    dict
+        Velocity fluctuation in the streamwise, wall-normal and spanwise directions.
+        Data:
+            - uu : velocity fluctuation in the streamwise direction
+            - vv : velocity fluctuation in the wall-normal direction
+            - ww : velocity fluctuation in the spanwise direction
+
+    
+#  11.2.7)
+
+-------------------------------------------------------------------------------------------------------------------------
+trainvali_data.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 21 14:47:23 2024
+
+@author: Andres Cremades Botella
+
+File to prepare the data for the training of the neural network. The file contains the following functions:
+    Functions:
+        - prepare_data_tf        : function to prepare the data with the tensorflow format
+        - read_data_tf           : function to read the data with the tensorflow format
+        - read_inout_notprepared : function to read the data for the training and the test directly from the flow
+                                   files
+        - data_traintest_tf      : function to separe training and test data from the flow files and convert them 
+                                   into the tensorflow format
+
+
+    .....................................................................................................................
+    # _read_datatf_function: Subroutine for reading the dataset. The function creates the tensorflow structure in case
+                             of the first file and concatenates it in the case of the following. The function is
+                             separated to the main workflow as it is repeated for the training and the validation.
+    .....................................................................................................................    
+    Parameters
+    ----------
+    data_in : dict, optional
+        data required for selecting the fields of the training and prepare it for the training process.
+        The default is {"index":[],"folder_savetf":"../../P125_21pi_vu_tf","train_test":"Test",
+                        "printflag":False,"version_tf":[2,10,1]}.
+        Data:
+            - index           : Index of the field to read.
+            - folder_tf       : folder for saving the data in the tensorflow format
+            - folderii_tf     : folder for saving the data in the tensorflow format for each flow field
+            - train_test      : Specifies if the field corresponds to the training or the validation
+            - version_tf      : version of the tensorflow module
+            - check           : check if database is correct
+            - ssh_flag_train  : flag determining if ssh connection should be activated
+            - uvw_folder_temp : temporal forlder for storing the files
+            - ssh_server      : server to read using the ssh connection
+            - ssh_username    : username of the server
+            - ssh_password    : password of the server user
+
+    Returns
+    -------
+    data_out : dict
+        Dictionary containing the tensorflow dataset for training or test and errors in case of checking.
+        Data:
+            - data_tf     : tensor containing the data
+            - flag_return : flag indicating if there is an error (1:no error, 0: error)
+            - index_file  : index of the flag generating the error
+
+    
+
+    .....................................................................................................................
+    # prepare_data_tf: Function for preparing the training and validation data
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        data required for selecting the fields of the training and prepare it for the training process.
+        The default is {"folder":"../P125_21pi_vu","file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                        "interval":[],"delta_pred":1,"padding":15,
+                        "shpx":1,"shpy":1,"shpz":1,"dx":1,"dy":1,"dz":1,"data_folder":"Data",
+                        "umean_file":"Umean.txt","unorm_file":"Unorm.txt","folder_tf":"../P125_21pi_vu_tf",
+                        "folderii_tf":"P125_21pi_vu.$INDEX$","data_type":"float32"}.
+        Data:
+            - folder      : folder to read the data of the velocity fields
+            - file        : file to read the data of the velocity fields
+            - interval    : index of the fields required for the training
+            - delta_pred  : distance between the fields
+            - padding     : padding of the fields
+            - shpx        : shape of the fields in x
+            - shpy        : shape of the fields in y
+            - shpz        : shape of the fields in z
+            - dx          : downsampling in x
+            - dy          : downsampling in y
+            - dz          : downsampling in z
+            - data_folder : folder to store the data generated by the code
+            - umean_file  : mean velocity file
+            - unorm_file  : file for the normalization of the 
+            - folder_tf   : folder for saving the data in the tensorflow format
+            - folderii_tf : folder for saving the data in the tensorflow format for each flow field
+            - data_type   : type of data of the tensors
+
+    Returns
+    -------
+    dict
+        Structure containing the data base for the training and the data for the test
+        Data:
+            - data_X      : training data
+            - data_Y      : validation data
+
+    
+
+    .....................................................................................................................
+    # read_data_tf: Function for reading the training and validation data in the tensorflow format
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        data required for selecting the fields for the training process.
+        The default is {"folder_tf":"../P125_21pi_vu_tf","folderii_tf":"P125_21pi_vu.$INDEX$","interval":[],
+                        "test_size":0.2}.
+        Data:
+            - folder_tf       : folder for saving the data in the tensorflow format
+            - folderii_tf     : folder for saving the data in the tensorflow format for each flow field
+            - interval        : index of the fields required for the training
+            - test_size       : size in percentage of the test dataset (value between 0 and 1)
+            - printflag       : flag for printing the file that is read
+            - ssh_flag_train  : flag determining if ssh connection should be activated
+            - uvw_folder_temp : temporal forlder for storing the files
+            - ssh_server      : server to read using the ssh connection
+            - ssh_username    : username of the server
+            - ssh_password    : password of the server user
+    
+    Returns
+    -------
+    dict
+        Structure containing the data for the training and the data for the test
+        Data:
+            - data_train : data for training
+            - data_vali  : data for test
+
+    
+
+    .....................................................................................................................
+    # check_data_tf: Function for reading the training and validation data in the tensorflow format
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        data required for selecting the fields for the training process.
+        The default is {"folder_tf":"../P125_21pi_vu_tf","folderii_tf":"P125_21pi_vu.$INDEX$","interval":[],
+                        "test_size":0.2}.
+        Data:
+            - folder_tf       : folder for saving the data in the tensorflow format
+            - folderii_tf     : folder for saving the data in the tensorflow format for each flow field
+            - interval        : index of the fields required for the training
+            - printflag       : flag for printing the file that is read
+            - ssh_flag_train  : flag determining if ssh connection should be activated
+            - uvw_folder_temp : temporal forlder for storing the files
+            - ssh_server      : server to read using the ssh connection
+            - ssh_username    : username of the server
+            - ssh_password    : password of the server user
+    
+    Returns
+    -------
+    dict
+        Structure containing the data for the training and the data for the test
+        Data:
+            - data_train : data for training
+            - data_vali  : data for test
+
+    
+
+    .....................................................................................................................
+    # read_inout_notprepared: Function for preparing the training and validation data
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        data required for selecting the fields of the training and prepare it for the training process.
+        The default is {"folder":"../P125_21pi_vu","file":"P125_21pi_vu.$INDEX$.h5.uvw",
+                        "interval":[],"delta_pred":1,"padding":15,
+                        "shpx":1,"shpy":1,"shpz":1,"dx":1,"dy":1,"dz":1,"data_folder":"Data",
+                        "umean_file":"Umean.txt","unorm_file":"Unorm.txt","data_type":"float32"}.
+        Data:
+            - folder      : folder to read the data of the velocity fields
+            - file        : file to read the data of the velocity fields
+            - interval    : index of the fields required for the training
+            - delta_pred  : distance between the fields
+            - padding     : padding of the fields
+            - shpx        : shape of the fields in x
+            - shpy        : shape of the fields in y
+            - shpz        : shape of the fields in z
+            - dx          : downsampling in x
+            - dy          : downsampling in y
+            - dz          : downsampling in z
+            - data_folder : folder to store the data generated by the code
+            - umean_file  : mean velocity file
+            - unorm_file  : file for the normalization of the velocity
+            - data_type   : type of the data (float16, float32)
+
+    Returns
+    -------
+    dict
+        Structure containing the data base for the training and the data for the test
+        Data:
+            - data_X      : training data
+            - data_Y      : validation data
+
+    
+
+    .....................................................................................................................
+    # data_traintest_tf: Function for preparing the training and validation data
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_trainval : dict, optional
+        data required for creating the training and validation tensors. The database has been already read and here 
+        the arrays of data are converted in the tensors used in the training
+        The default is {"data_X":[],"data_Y":[],"interval":None,"test_size":0.2,"data_type":"float32"}.
+        Data:
+            - data_X      : training data
+            - data_Y      : validation data
+            - interval    : index of the fields required for the training
+            - test_size   : size in percentage of the test dataset (value between 0 and 1)
+            - data_type   : type of data of the tensors (float32,float16)
+    
+    Returns
+    -------
+    dict
+        Structure containing the data for the training and the data for the test
+        Data:
+            - data_train : data for training
+            - data_vali  : data for test
+    
+    
+#  11.2.8)
+
+-------------------------------------------------------------------------------------------------------------------------
+umean.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Fri Mar 22 09:23:59 2024
+
+@author: Andres Cremades Botella
+
+File for calculating and reading the mean velocity. The file contains the following functions:
+    Functions:
+        - save_Umean : function for saving the mean velocity
+        - read_Umean : function for reading the mean velocity
+        - calc_Umean : function for calculating the mean velocity
+
+
+    .....................................................................................................................
+    # save_Umean: Function for saving the mean velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Information for saving the mean velocity.
+        The default is {"file":"Umean.txt","UUmean":[],"VVmean":[],"WWmean":[]}.
+        Data:
+            - folder : folder to save the information
+            - file   : file to save the information
+            - UUmean : mean streamwise velocity
+            - VVmean : mean wall-normal velocity
+            - WWmean : mean spanwise velocity
+
+    Returns
+    -------
+    None.
+
+    
+ 
+    .....................................................................................................................   
+    # read_Umean: Function for read the mean velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data to read the mean velocity.
+        The default is {"folder":"Data","file":"Umean.txt","dy":1}.
+        Data:
+            - folder : folder to read the calculated data
+            - file   : file of the mean velocity
+            - dy     : downsampling in the y direction
+
+    Returns
+    -------
+    dict
+        Mean velocity in the streamwise, wall-normal and spanwise directions is returned.
+        Data:
+            - UUmean : streamwise mean velocity as a function of the wall-normal distance
+            - VVmean : wall-normal mean velocity as a function of the wall-normal distance
+            - WWmean : spanwise mean velocity as a function of the wall-normal distance
+
+    
+
+    .....................................................................................................................
+    # calc_Umean: Function for calculating the mean velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for the calculation of the mean velocity. 
+        The default is {"field_ini":1000,"field_fin":9999,"folder":"../P125_21pi_vu",
+                        "file":"P125_21pi_vu.$INDEX$.h5.uvw","save_file":True,"fileUmean":"Umean.txt",
+                        "data_folder":"Data"}.
+        Data:
+            - field_ini   : index of the initial field used for calculating the mean velocity
+            - field_fin   : index of the final field used for calculating the mean velocity
+            - folder      : path of the folder to read the velocity data base
+            - file        : name of the file to read the velocity
+            - save_file    : flag to save the mean velocity in a file
+            - umean_file  : file for saving the mean velocity
+            - data_folder : path of the folder of the data calculated by the code
+            - shpx        : shape of the tensors in the streamwise direction
+            - shpy        : shape of the tensors in the wall-normal direction
+            - shpz        : shape of the tensors in the spanwise direction
+
+    Returns
+    -------
+    dict
+        Mean velocity in the streamwise, wall-normal and spanwise directions is returned. Only used when the saving
+        option is not active.
+        Data:
+            - UUmean : streamwise mean velocity as a function of the wall-normal distance
+            - VVmean : wall-normal mean velocity as a function of the wall-normal distance
+            - WWmean : spanwise mean velocity as a function of the wall-normal distance
+
+    
+#  11.2.9)
+
+-------------------------------------------------------------------------------------------------------------------------
+urms.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Mar 27 08:50:04 2024
+
+@author: Andres Cremades Botella
+
+File to create the RMS values for the velocity fields. Functions contained in the file:
+    Functions:
+        - read_rms : function to read the rms of the velocity
+        - save_rms : function to save the rms of the velocity
+        - calc_rms : function to calculate the rms of the velocity
+
+
+    .....................................................................................................................
+    # read_rms: Function for reading the RMS
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for reading the RMS file. The default is {"file":"Urms.txt","folder":"Data"}.
+        Data:
+            - file   : file of the RMS of the velocity
+            - folder : folder of the generated data
+
+    Returns
+    -------
+    data_out : dict
+        Data of the RMS of the velocity.
+        Data:
+            - uurms : RMS of the streamwise velocity
+            - vvrms : RMS of the wall-normal velocity
+            - wwrms : RMS of the spanwise velocity
+            - uv    : Mean uv stress along the wall-normal distance
+            - vw    : Mean vw stress along the wall-normal distance
+            - uw    : Mean uw stress along the wall-normal distance
+
+    
+
+    .....................................................................................................................
+    # save_rms: Function for saving the RMS of the velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data for saving the RMS of the velocity.
+        The default is {"file":"Urms.txt","folder":"Data","uurms":[],"vvrms":[],"wwrms":[],"uv":[],"vw":[],"uw":[]}.
+        Data:
+            - file : file of the RMS of the velocity
+            - folder : folder of the generated data
+            - uurms : RMS of the streamwise velocity
+            - vvrms : RMS of the wall-normal velocity
+            - wwrms : RMS of the spanwise velocity
+            - uv    : Mean uv stress along the wall-normal distance
+            - vw    : Mean vw stress along the wall-normal distance
+            - uw    : Mean uw stress along the wall-normal distance
+
+    Returns
+    -------
+    None.
+
+    
+
+    .....................................................................................................................
+    # calc_rms: Function to calculate the RMS of the velocity data along the wall-normal direction
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        The data required for the calculation of the RMS.
+        The default is {"field_ini":1000,"field_fin":9999,"umean_file":"Umean.txt","data_folder":"Data", 
+                        "file":"../P125_21pi_vu","folder":"P125_21pi_vu.$INDEX$.h5.uvw","dx":1,"dy":1,"dz":1,
+                           "shpx":192,"shpy":201,"shpz":96,"save_file":True,"urms_file":"Urms.txt"}.
+        Data:
+            - field_ini   : index of the initial field
+            - field_fin   : index of the final field
+            - umean_file  : file of the mean velocity
+            - data_folder : folder of the generated data
+            - file        : file of the velocity flow
+            - folder      : folder of the velocity flow
+            - dx          : downsampling in the streamwise direction
+            - dy          : downsampling in the wall-normal direction
+            - dz          : downsampling in the spanwise direction
+            - shpx        : shape of the tensors in the streamwise direction
+            - shpy        : shape of the tensors in the wall-normal direction
+            - shpz        : shape of the tensors in the spanwise direction
+            - save_file   : flag for saving the information in a file (True: the information is saved in a file,
+                                                                       False: the information is stored in a variable)
+            - urms_file   : file containing the information of the RMS of the velocity
+
+    Returns
+    -------
+    data_out : dict
+        Data of the RMS. Only used in the case of not saving the information in a file.
+        Data:
+            - uurms : RMS of the streamwise velocity
+            - vvrms : RMS of the wall-normal velocity
+            - wwrms : RMS of the spanwise velocity
+            - uv    : Mean uv stress along the wall-normal distance
+            - vw    : Mean vw stress along the wall-normal distance
+            - uw    : Mean uw stress along the wall-normal distance
+
+    
+
+# 11.3):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_packages]
+    This folder is used for storing python modules that have been modified
+..........................................................................................................................
+
+#  11.3.1)
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[shap]
+    This folder contains a modification on the GradientExplainer to reduce the memory requirements
+..........................................................................................................................
+
+
+# 11.4):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_plots]
+    This folder is used for storing python code related to the functions used in the plots
+..........................................................................................................................
+
+#  11.4.1)
+
+-------------------------------------------------------------------------------------------------------------------------
+plottrain.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 12:37:35 2024
+
+@author: Andres Cremades Botella
+
+File to plot training information. The file contains the following functions:
+    - Functions:
+        - plottrain : function to plot the training evolution
+
+
+    .....................................................................................................................
+    # plottrain: Function to generate the plot of the loss function during the training
+    .....................................................................................................................
+    Parameters
+    ----------
+    plot_format_data : dict, optional
+        Data required for generating the plot. 
+        The default is {"file":"hist.txt","folder":"Data","plot_folder":"plots","xlabel":"Epoch",
+                        "ylabel":"Loss function (-)","fontsize":18,"figsize_x":10,
+                        "figsize_y":8,"xscale":"linear","yscale":"log","colormap":"viridis","colornum":2,
+                        "fig_name":"training_info","dpi":60}.
+        Data:
+            - file : file of the training information
+            - folder : folder of the data generated during the training
+            - plot_folder : folder to store the figures
+            - fontsize    : font size used for the figure
+            - xlabel      : label of the x axis
+            - ylabel      : label of the y axis
+            - figsize_x   : size of the figure in x
+            - figsize_y   : size of the figure in y
+            - colormap    : colormap used for the figure
+            - colornum    : number of colors of the colormap, two curves are used. The number of levels of the 
+                            colormap needs to be higher than 2 
+            - fig_name    : name of the saved figure
+            - dpi         : dots per inch of the saved figure
+
+    Returns
+    -------
+    None.
+
+    
+#  11.4.2)
+
+-------------------------------------------------------------------------------------------------------------------------
+plotmean.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 12:37:35 2024
+
+@author: Andres Cremades Botella
+
+File to plot training information:
+    - Functions:
+        - plotumean : function to plot the mean velocity
+
+
+    .....................................................................................................................
+    # plottrain: Function to generate the plot of the mean velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data required for generating the plot. 
+        The default is {"file":"Umean.txt","folder":"Data","plot_folder":"plots","xlabel":"$y^+$",
+                        "ylabel":"$\overline{U}$","fontsize":18,"figsize_x":10,
+                        "figsize_y":8,"xscale":"linear","yscale":"log","colormap":"viridis","colornum":2,
+                        "fig_name":"training_info","dpi":60,"dy":1,"L_x":2*np.pi,"L_y":1,"L_z":np.pi,
+                        "file_trj":"Re180.prof.txt"}.
+        Data:
+            - file : file of the training information
+            - folder : folder of the data generated during the training
+            - plot_folder : folder to store the figures
+            - fontsize    : font size used for the figure
+            - xlabel      : label of the x axis
+            - ylabel      : label of the y axis
+            - figsize_x   : size of the figure in x
+            - figsize_y   : size of the figure in y
+            - colormap    : colormap used for the figure
+            - colornum    : number of colors of the colormap, two curves are used. The number of levels of the 
+                            colormap needs to be higher than 2 
+            - fig_name    : name of the saved figure
+            - dpi         : dots per inch of the saved figure
+            - dy          : downsampling in the wall-normal direction
+            - dx          : downsampling in the streamwise direction
+            - dz          : downsampling in the spanwise direction
+            - uvw_folder  : folder of the flow fields
+            - uvw_file    : file of the flow fields
+            - L_x         : streamwise dimension of the channel
+            - L_y         : wall-normal dimension of the channel
+            - L_z         : spanwise dimension of the channel
+            - file_trj    : file containing the statistics of Torroja
+            - rey         : friction Reynolds number
+            - utau        : friction velocity
+
+    Returns
+    -------
+    None.
+
+    
+#  11.4.3)
+
+-------------------------------------------------------------------------------------------------------------------------
+ploturms.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Thu Mar 28 12:37:35 2024
+
+@author: Andres Cremades Botella
+
+File to plot training information
+
+
+    .....................................................................................................................
+    # plottrain: Function to generate the plot of the mean velocity
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        Data required for generating the plot. 
+        The default is {"file":"hist.txt","folder":"Data","plot_folder":"plots","xlabel":"$y^+$",
+                        "ylabel":"$\overline{U}$","fontsize":18,"figsize_x":10,
+                        "figsize_y":8,"xscale":"linear","yscale":"log","colormap":"viridis","colornum":2,
+                        "fig_name":"training_info","dpi":60,"dy":1,"L_x":2*np.pi,"L_y":1,"L_z":np.pi,
+                        "file_trj":"Re180.prof.txt"}.
+        Data:
+            - file        : file of the training information
+            - folder      : folder of the data generated during the training
+            - plot_folder : folder to store the figures
+            - fontsize    : font size used for the figure
+            - xlabel      : label of the x axis
+            - ylabel      : label of the y axis
+            - ylabel2     : label of the y axis of the second figure
+            - figsize_x   : size of the figure in x
+            - figsize_y   : size of the figure in y
+            - colormap    : colormap used for the figure
+            - colornum    : number of colors of the colormap, two curves are used. The number of levels of the 
+                            colormap needs to be higher than 2 
+            - fig_name    : name of the saved figure
+            - fig_name2   : name of the saved figure for the second plot
+            - dpi         : dots per inch of the saved figure
+            - dy          : downsampling in the wall-normal direction
+            - dx          : downsampling in the streamwise direction
+            - dz          : downsampling in the spanwise direction
+            - uvw_folder  : folder of the flow fields
+            - uvw_file    : file of the flow fields
+            - L_x         : streamwise dimension of the channel
+            - L_y         : wall-normal dimension of the channel
+            - L_z         : spanwise dimension of the channel
+            - file_trj    : file containing the statistics of Torroja
+            - rey         : friction Reynolds number
+            - utau        : friction velocity
+
+    Returns
+    -------
+    None.
+
+    
+
+# 11.5):
+--------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------------------------------------------------------------------
+[py_remote]
+    This folder is used for storing python code using for reading the database in a ssh server
+..........................................................................................................................
+
+#  11.5.1)
+
+-------------------------------------------------------------------------------------------------------------------------
+urms.py
+-------------------------------------------------------------------------------------------------------------------------
+Created on Wed Apr 24 13:46:59 2024
+
+@author: andre
+
+File containing the functions used for reading the remote files in a ssh server.
+Functions:
+    - recursivedelete  : Function to remove the files in a folder
+    - _get_r_portable  : Get files in a folder from ssh server recursively.
+    - read_from_server : Function for reading the files from a server
+
+
+    .....................................................................................................................
+    # recursivedelete: Function to remove the files in a folder
+    .....................................................................................................................
+    Parameters
+    ----------
+    localdir : list
+        DESCRIPTION. directory to clean
+
+    Returns
+    -------
+    None.
+
+    
+
+    .....................................................................................................................
+    # _get_r_portable: Get files in a folder from ssh server recursively. 
+                       Taken from https://stackoverflow.com/questions/6674862/recursive-directory-download-with-paramiko
+    .....................................................................................................................
+    Parameters
+    ----------
+    sftp : SFTPClient session object
+        DESCRIPTION. SFTP session on the SSH server
+    remotedir : str
+        DESCRIPTION. Remote directory of the folder
+    localdir : TYPE
+        DESCRIPTION. Local directory of the folder
+
+    Returns
+    -------
+    None.
+
+    
+
+    .....................................................................................................................
+    # read_from_server: Function for reading the files from a server
+    .....................................................................................................................
+    Parameters
+    ----------
+    data_in : dict, optional
+        DESCRIPTION. The default is {"remotedir":"/P125_21pi_vu_tf_float32/P125_21pi_vu.1000",
+                                     "localdir":"tmpdata","server":"slogan.mech.kth.se","username":"andrescb", 
+                                     "password":"***"}.
+        Data:
+            - remotedir : remote directory to read the files
+            - localdir  : local directory to temporally store the files
+            - server    : server to read files
+            - username  : user of the server
+            - password  : password to the user account
+
+    Returns
+    -------
+    None.
+
+    
